@@ -79,7 +79,7 @@ export function constructQuery(manifest, queryBbox, theme='*', type='*') {
         fields["elevation"] = "elevation";
     } else if (theme === "base" && type === "bathymetry") {
         fields["geometry"] = "ST_AsText(geometry)";
-        fields["elevation"] = "elevation";
+        fields["depth"] = "depth";
     } else if (theme === "base" && type === "water") {
         fields["geometry"] = `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
     } else if (theme === "base" && type === "land cover") {
