@@ -45,10 +45,6 @@ function findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
      * If theme or type is '*', it will match all themes or types respectively.
      */
     let files =  manifest.filter(file => bboxIntersects(file.bbox, queryBbox));
-    console.log(type);
-    console.log(theme);
-    console.log(manifest);
-    console.log(files);
     if (theme && theme != '*') {
         files = files.filter(file => file.theme === theme);
     }
@@ -58,50 +54,32 @@ function findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
     return files.map(file => file.fullPath);
 }
 
-
-export function constructQuery(manifest, queryBbox, theme='*', type='*') {
+export function constructQuery(manifest, queryBbox, theme = '*', type = '*', rules = [() => ({'*':'*'})]) {
     const files = findMatchingFiles(manifest, queryBbox, theme, type);
-    const WKTEnvelope = `ST_MakeEnvelope(${queryBbox[0]}, ${queryBbox[1]}, ${queryBbox[2]}, ${queryBbox[3]})`;
-
-    const fields = {
-        "id": "id"
-    }
-    if (theme === "transportation" && type === "segment") {
-        fields["geometry"] = "ST_AsText(geometry)";
-        fields["class"] = "class";
-        fields["subclass"] = "subclass";
-    } else if (theme === "places" && type === "place") {
-        fields["geometry"] = "ST_AsText(geometry)";
-    } else if (theme === "buildings" && type === "building") {
-        fields["geometry"] = "ST_AsText(geometry)";
-    } else if (theme === "base" && type === "land") {
-        fields["geometry"] = "ST_AsText(geometry)";
-        fields["elevation"] = "elevation";
-    } else if (theme === "base" && type === "bathymetry") {
-        fields["geometry"] = "ST_AsText(geometry)";
-        fields["depth"] = "depth";
-    } else if (theme === "base" && type === "water") {
-        fields["geometry"] = `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
-    } else if (theme === "base" && type === "land cover") {
-        fields["geometry"] = `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
-    }
-
-    if (files.length === 0) {
-        throw new Error('No files found for the given query');
-    }
     
+    if (files.length === 0) {
+      throw new Error('No files found for the given query');
+    }
+  
+    const fields = {
+      ...rules.reduce((acc, rule) => ({ ...acc, ...rule() }), {})
+    };
+  
     const fileListText = files.map(file => `'s3://${file}'`).join(',\n    ');
-    const query = `
-SELECT
-    ${Object.entries(fields).map(([alias, column]) => `${column} AS ${alias}`).join(',\n    ')}
-FROM read_parquet([
-    ${fileListText}
-])
-WHERE
-    bbox.xmax > ${queryBbox[0]} AND
-    bbox.ymax > ${queryBbox[1]} AND
-    bbox.xmin < ${queryBbox[2]} AND
-    bbox.ymin < ${queryBbox[3]}
-;`
-   return query; 
-}
+    const fieldList = Object.entries(fields)
+      .map(([alias, column]) => (column != '*') ? `    ${column} AS ${alias}` : `    *`)
+      .join(',\n');
+  
+    return `
+  SELECT
+  ${fieldList}
+  FROM read_parquet([
+      ${fileListText}
+  ])
+  WHERE
+      bbox.xmax > ${queryBbox[0]} AND
+      bbox.ymax > ${queryBbox[1]} AND
+      bbox.xmin < ${queryBbox[2]} AND
+      bbox.ymin < ${queryBbox[3]}
+  ;`;
+  }

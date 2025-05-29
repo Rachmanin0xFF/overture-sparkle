@@ -65,11 +65,31 @@ export class DuckDBManager {
         `);
     }
 
-    async queryWithManifest(bbox, theme, type) {
+    async queryForVisualization(bbox, theme, type) {
+        const WKTEnvelope = `ST_MakeEnvelope(${bbox.join(', ')})`;
+        this.visualization_transform = [
+            () => ({id: 'id'}),
+            () => ({ geometry: theme === 'base' 
+              ? `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
+              : `ST_AsText(geometry)` 
+            }),
+            
+            () => theme === 'transportation' && type === 'segment' 
+              ? { class: 'class', subclass: 'subclass' } 
+              : {},
+              
+            () => theme === 'base' && type === 'land' 
+              ? { elevation: 'elevation' } 
+              : {},
+            
+            () => theme === 'base' && type === 'bathymetry' 
+              ? { depth: 'depth' } 
+              : {}
+          ];
         if (!this.isInitialized) {
             throw new Error('DuckDB not initialized. Call initialize() first.');
         }
-        const sql = constructQuery(this.manifest, bbox, theme, type);
+        const sql = constructQuery(this.manifest, bbox, theme, type, this.visualization_transform);
         const query_result = await this.queryCustom(sql);
         return query_result;
     }
