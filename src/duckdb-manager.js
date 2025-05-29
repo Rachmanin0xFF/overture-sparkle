@@ -23,6 +23,7 @@ export class DuckDBManager {
         this.manifest = await loadManifest(this.manifest_path);
 
         try {
+            // Automatic bundles weren't working
         	const MANUAL_BUNDLES = {
             	mvp: {
                 	mainModule: duckdb_wasm,
@@ -44,10 +45,9 @@ export class DuckDBManager {
             
             this.connection = await this.db.connect()
             
+            // These are necessary for Overture data
             await this.connection.query('INSTALL spatial; LOAD spatial;')
             console.log('Spatial extension installed.');
-            
-            // Configure for S3 access (if needed)
             await this.setupS3Config();
             
             this.isInitialized = true;
@@ -59,17 +59,17 @@ export class DuckDBManager {
     }
 
     async setupS3Config() {
-        // Configure S3 access for public buckets
         await this.connection.query(`
             SET s3_region='us-west-2';
         `);
     }
 
     async queryForVisualization(bbox, theme, type) {
+        // I wanted to keep query-constructor use case-agnostic, so I feed it visualization-specific rules here
         const WKTEnvelope = `ST_MakeEnvelope(${bbox.join(', ')})`;
         this.visualization_transform = [
             () => ({id: 'id'}),
-            () => ({ geometry: theme === 'base' 
+            () => ({ geometry: theme === 'base' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
               ? `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
               : `ST_AsText(geometry)` 
             }),

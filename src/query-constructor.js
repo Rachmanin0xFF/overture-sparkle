@@ -55,6 +55,14 @@ function findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
 }
 
 export function constructQuery(manifest, queryBbox, theme = '*', type = '*', rules = [() => ({'*':'*'})]) {
+    /**
+     * Construct a DuckDB query based on the provided bounding box, theme, type, and rules.
+     * @param {Array} manifest - The manifest containing file metadata (an array of files with bounding boxes, get it from loadManifest).
+     * @param {Array} queryBbox - The bounding box for the query in the format [minX, minY, maxX, maxY].
+     * @param {string} theme - The theme to filter by (default is '*', which matches all themes).
+     * @param {string} type - The type to filter by (default is '*', which matches all types).
+     * @param {Array} rules - An array of functions that return field mappings for the query. Defaults to selecting all fields.
+     */
     const files = findMatchingFiles(manifest, queryBbox, theme, type);
     
     if (files.length === 0) {
