@@ -5,11 +5,416 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>overture-sparkle</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Montserrat, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c2e7f;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .controls-panel {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 30px;
+            min-width: 0;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group input,
+        .control-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .resolution-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .status-display {
+            background: linear-gradient(135deg, #eaedf0 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        #status-text {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .status-loading {
+            color: #05a5af !important;
+        }
+
+        .status-success {
+            color: #27ae60 !important;
+        }
+
+        .status-error {
+            color: #e74c3c !important;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-primary {
+            background: #3a3c9e;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px #4361e6;
+        }
+
+        .btn-secondary {
+            background: #157592;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-accent {
+            background: #3f4c55;
+            color: white;
+        }
+
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 123, 123, 0.3);
+        }
+
+        .visualization-area {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+        }
+
+        #p5-container {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            background: #f8f9fa;
+            min-height: 400px;
+            min-width: 400px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 100%; /* add this */
+        }
+
+        #p5-container canvas {
+            max-width: 100%; /* add this */
+            height: auto; /* add this */
+        }
+
+        .placeholder-text {
+            color: #6c757d;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                font-size: 0.85rem;
+                padding: 12px 8px;
+                letter-spacing: 0.2px;
+            }
+
+            .container {
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 0px;
+            }
+
+            body {
+                padding: 0px;
+            }
+            
+            .controls-panel {
+                width: 100%;
+                max-width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            #p5-container {
+                min-width: 0; /* override the 400px min-width */
+                width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>overture-sparkle</h1>
-    <p>Visualize Overture Maps data with p5.js!</p>
-    <div id="p5-container"></div>
+    <div class="container">
+        <div class="header">
+            <h1>overture-sparkle</h1>
+            <p>Visualize Overture Maps data with p5.js!</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label for="bounding-box">Bounding Box</label>
+                    <input 
+                        type="text" 
+                        id="bounding-box" 
+                        placeholder="min_lng,min_lat,max_lng,max_lat"
+                        value="-74.1,40.6,-73.9,40.8"
+                    >
+                    <div class="help-text">Format: min_lng,min_lat,max_lng,max_lat</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="visual-style">Visual Style</label>
+                    <select id="visual-style">
+                        <option value="classic">Classic</option>
+                        <option value="light">Light</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Output Resolution</label>
+                    <div class="resolution-controls">
+                        <div>
+                            <input 
+                                type="number" 
+                                id="width" 
+                                placeholder="Width"
+                                value="800"
+                                min="100"
+                                max="4000"
+                            >
+                        </div>
+                        <div>
+                            <input 
+                                type="number" 
+                                id="height" 
+                                placeholder="Height"
+                                value="600"
+                                min="100"
+                                max="4000"
+                            >
+                        </div>
+                    </div>
+                    <div class="help-text">Width × Height in pixels</div>
+                </div>
+
+                <div class="status-display">
+                    <div id="status-text">Loading...</div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="query-btn" disabled>
+                        Query Overture Data
+                    </button>
+                    <button class="btn btn-secondary" id="render-btn" disabled>
+                        Render Visualization
+                    </button>
+                    <button class="btn btn-accent" id="save-btn" disabled>
+                        Save Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="visualization-area">
+                <div id="p5-container">
+                    <div class="placeholder-text">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
+    <script>
+        // UI Control Functions
+        window.uiControls = {
+            setStatus: function(message, type = 'default') {
+                const statusEl = document.getElementById('status-text');
+                statusEl.textContent = message;
+                
+                // Remove existing status classes
+                statusEl.classList.remove('status-loading', 'status-success', 'status-error');
+                
+                // Add appropriate class
+                if (type === 'loading') statusEl.classList.add('status-loading');
+                else if (type === 'success') statusEl.classList.add('status-success');
+                else if (type === 'error') statusEl.classList.add('status-error');
+            },
+
+            isLoading: function() {
+                const statusEl = document.getElementById('status-text');
+                return statusEl.classList.contains('status-loading');
+            },
+            
+            disableButtons: function(buttons = ['query', 'render', 'save']) {
+                buttons.forEach(btn => {
+                    const element = document.getElementById(`${btn}-btn`);
+                    if (element) element.disabled = true;
+                });
+            },
+            
+            enableButtons: function(buttons = ['query', 'render', 'save']) {
+                buttons.forEach(btn => {
+                    const element = document.getElementById(`${btn}-btn`);
+                    if (element) element.disabled = false;
+                });
+            },
+            
+            disableAllButtons: function() {
+                this.disableButtons(['query', 'render', 'save']);
+            },
+            
+            enableAllButtons: function() {
+                this.enableButtons(['query', 'render', 'save']);
+            }
+        };
+
+        // Add event listeners for the buttons
+        document.getElementById('query-btn').addEventListener('click', function() {
+            const boundingBox = document.getElementById('bounding-box').value;
+            const style = document.getElementById('visual-style').value;
+            
+            // Dispatch custom event that your main.js can listen for
+            window.dispatchEvent(new CustomEvent('queryOverture', {
+                detail: { boundingBox, style }
+            }));
+        });
+
+        document.getElementById('render-btn').addEventListener('click', function() {
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const style = document.getElementById('visual-style').value;
+            
+            window.dispatchEvent(new CustomEvent('renderVisualization', {
+                detail: { width, height, style }
+            }));
+        });
+
+        document.getElementById('save-btn').addEventListener('click', function() {
+            window.dispatchEvent(new CustomEvent('saveImage'));
+        });
+    </script>
 </body>
 </html>
