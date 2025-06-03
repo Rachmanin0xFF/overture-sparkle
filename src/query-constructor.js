@@ -5,6 +5,7 @@ export async function loadManifest(manifestPath) {
 
     const filesWithBounds = [];
     
+    // Flatten the manifest and get extract theme/type/bbox/path
     manifest.themes.forEach(theme => {
       theme.types.forEach(type => {
         type.files.forEach(file => {
@@ -22,7 +23,7 @@ export async function loadManifest(manifestPath) {
     return filesWithBounds;
 }
 
-function bboxIntersects(bbox1, bbox2) {
+function _bboxIntersects(bbox1, bbox2) {
     // bbox format: [minX, minY, maxX, maxY]
     const [minX1, minY1, maxX1, maxY1] = bbox1;
     const [minX2, minY2, maxX2, maxY2] = bbox2;
@@ -30,21 +31,12 @@ function bboxIntersects(bbox1, bbox2) {
     return !(maxX1 < minX2 || maxX2 < minX1 || maxY1 < minY2 || maxY2 < minY1);
 }
 
-function explodeWildcardPath(manifest, path) {
-    /**
-     * match all the names in the manifest with the given path (which may contain wildcards) using regex
-    * probably useful for 'translating' conventional wildcard queries into duckdb-wasm-friendly ones
-    */
-    const regex = new RegExp(path.replace(/\*/g, '.*'));
-    return manifest.filter(file => regex.test(file.fullPath));
-}
-
-function findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
+function _findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
     /**
      * Find files in the manifest that intersect with the given bounding box and match the theme and type.
      * If theme or type is '*', it will match all themes or types respectively.
      */
-    let files =  manifest.filter(file => bboxIntersects(file.bbox, queryBbox));
+    let files =  manifest.filter(file => _bboxIntersects(file.bbox, queryBbox));
     if (theme && theme != '*') {
         files = files.filter(file => file.theme === theme);
     }
@@ -52,6 +44,16 @@ function findMatchingFiles(manifest, queryBbox, theme=null, type=null) {
         files = files.filter(file => file.type === type);
     }
     return files.map(file => file.fullPath);
+}
+
+function explodeWildcardPath(manifest, path) {
+    // currently unused
+    /**
+     * match all the names in the manifest with the given path (which may contain wildcards) using regex
+    * probably useful for 'translating' conventional wildcard queries into duckdb-wasm-friendly ones
+    */
+    const regex = new RegExp(path.replace(/\*/g, '.*'));
+    return manifest.filter(file => regex.test(file.fullPath));
 }
 
 export function constructQuery(manifest, queryBbox, theme = '*', type = '*', rules = [() => ({'*':'*'})]) {
@@ -63,12 +65,13 @@ export function constructQuery(manifest, queryBbox, theme = '*', type = '*', rul
      * @param {string} type - The type to filter by (default is '*', which matches all types).
      * @param {Array} rules - An array of functions that return field mappings for the query. Defaults to selecting all fields.
      */
-    const files = findMatchingFiles(manifest, queryBbox, theme, type);
+    const files = _findMatchingFiles(manifest, queryBbox, theme, type);
     
     if (files.length === 0) {
       throw new Error('No files found for the given query');
     }
-  
+
+    // Wow, I don't write Javascript often... this looks so weird.
     const fields = {
       ...rules.reduce((acc, rule) => ({ ...acc, ...rule() }), {})
     };
@@ -85,9 +88,8 @@ export function constructQuery(manifest, queryBbox, theme = '*', type = '*', rul
       ${fileListText}
   ])
   WHERE
-      bbox.xmax > ${queryBbox[0]} AND
-      bbox.ymax > ${queryBbox[1]} AND
-      bbox.xmin < ${queryBbox[2]} AND
-      bbox.ymin < ${queryBbox[3]}
-  ;`;
+      bbox.xmax >= ${queryBbox[0]} AND
+      bbox.ymax >= ${queryBbox[1]} AND
+      bbox.xmin <= ${queryBbox[2]} AND
+      bbox.ymin <= ${queryBbox[3]}`;
   }

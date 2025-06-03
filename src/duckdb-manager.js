@@ -6,7 +6,7 @@ import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url'
 
 import { loadManifest, constructQuery } from './query-constructor.js';
 
-export class DuckDBManager {
+class DuckDBManager {
     constructor(release_version='2025-05-21.0') {
         this.release_version = release_version
         this.release_path = `s3://overturemaps-us-west-2/release/${this.release_version}/`
@@ -15,6 +15,12 @@ export class DuckDBManager {
         this.connection = null;
         this.manifest = null;
         this.isInitialized = false;
+    }
+
+    async _ensureInitialized() {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
     }
 
     async initialize() {
@@ -64,40 +70,15 @@ export class DuckDBManager {
         `);
     }
 
-    async queryForVisualization(bbox, theme, type) {
-        // I wanted to keep query-constructor use case-agnostic, so I feed it visualization-specific rules here
-        const WKTEnvelope = `ST_MakeEnvelope(${bbox.join(', ')})`;
-        this.visualization_transform = [
-            () => ({id: 'id'}),
-            () => ({ geometry: theme === 'base' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
-              ? `ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))`
-              : `ST_AsText(geometry)` 
-            }),
-            
-            () => theme === 'transportation' && type === 'segment' 
-              ? { class: 'class', subclass: 'subclass' } 
-              : {},
-              
-            () => theme === 'base' && type === 'land' 
-              ? { elevation: 'elevation' } 
-              : {},
-            
-            () => theme === 'base' && type === 'bathymetry' 
-              ? { depth: 'depth' } 
-              : {}
-          ];
-        if (!this.isInitialized) {
-            throw new Error('DuckDB not initialized. Call initialize() first.');
-        }
-        const sql = constructQuery(this.manifest, bbox, theme, type, this.visualization_transform);
-        const query_result = await this.queryCustom(sql);
+    async queryOverture(bbox, theme, type, rules=undefined) {
+        await this._ensureInitialized();
+        const sql = constructQuery(this.manifest, bbox, theme, type, rules);
+        const query_result = await this.executeSQL(sql);
         return query_result;
     }
     
-    async queryCustom(sql) {
-        if (!this.isInitialized) {
-            throw new Error('DuckDB not initialized. Call initialize() first.');
-        }
+    async executeSQL(sql) {
+        await this._ensureInitialized();
 
         console.log('Executing query:', sql);
         try {
@@ -117,5 +98,43 @@ export class DuckDBManager {
             await this.db.terminate();
         }
         this.isInitialized = false;
+    }
+}
+
+export class DuckDBVisualizationManager extends DuckDBManager {
+    constructor(release_version='2025-05-21.0') {
+        super(release_version);
+    }
+
+    async queryForVisualization(bbox, theme, type) {
+        await this._ensureInitialized();
+        // I wanted to keep query-constructor use case-agnostic, so I feed it visualization-specific rules here
+        const WKTEnvelope = `ST_MakeEnvelope(${bbox.join(', ')})`;
+        const rules = [
+            () => ({id: 'id'}),
+            () => ({ geometry: theme === 'base' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
+              ? `CASE 
+                    WHEN ST_GeometryType(geometry) = 'POLYGON' 
+                    THEN ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))
+                    ELSE ST_AsText(${WKTEnvelope})
+                    END`
+              : `ST_AsText(geometry)` 
+            }),
+            
+            () => theme === 'transportation' && type === 'segment' 
+              ? { class: 'class', subclass: 'subclass' } 
+              : {},
+              
+            () => theme === 'base' && type === 'land' 
+              ? { elevation: 'elevation' } 
+              : {},
+            
+            () => theme === 'base' && type === 'bathymetry' 
+              ? { depth: 'depth' } 
+              : {}
+          ];
+        const sql = constructQuery(this.manifest, bbox, theme, type, rules);
+        const queryResult = await this.executeSQL(sql);
+        return Array.from(queryResult).map(row => ({...row}));
     }
 }
