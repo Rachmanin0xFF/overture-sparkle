@@ -22,7 +22,11 @@ window.addEventListener('queryOverture', async (e) => {
     window.uiControls.disableAllButtons();
     const { boundingBox, style } = e.detail;
     try {
-        const result = await dbManager.queryForVisualization([-74.439497, 40.846200, -74.418790, 40.856653], 'base', 'water');
+        const split_array = boundingBox.replace(/[ ()]/g, "").split(',');
+        const bbox = split_array.map(Number);
+
+        const result = await dbManager.queryForVisualization(bbox, 'transportation', 'segment');
+        result.bbox = bbox;
         console.log('Query Result:', result);
         console.log('Query Result:', result[0].geometry);
         visualizer.updateData(result);
@@ -40,7 +44,7 @@ window.addEventListener('renderVisualization', async (e) => {
     window.uiControls.disableAllButtons();
     const { width, height, style } = e.detail;
     try {
-        visualizer.renderVisualization(width, height, style);
+        visualizer.renderVisualization(width, style);
         window.uiControls.enableButtons(['query', 'render', 'save']);
         window.uiControls.setStatus("Data retrieved", "success");
     } catch (error) {
