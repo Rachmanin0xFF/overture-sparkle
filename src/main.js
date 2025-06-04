@@ -48,8 +48,16 @@ window.addEventListener('renderVisualization', async (e) => {
         window.uiControls.enableButtons(['query', 'render', 'save']);
         window.uiControls.setStatus("Data retrieved", "success");
     } catch (error) {
-        console.error('Query failed:', error);
+        console.error('Visualization failed:', error);
         window.uiControls.enableButtons(['query', 'render']);
         window.uiControls.setStatus("Visualization failed!", "error");
+    }
+});
+
+window.addEventListener('saveImage', async (e) => {
+    try {
+        visualizer.saveImage();
+    } catch (error) {
+        console.error('Image save failed:', error);
     }
 });

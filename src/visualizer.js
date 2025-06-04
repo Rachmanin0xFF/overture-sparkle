@@ -48,6 +48,7 @@ let sketch = function(p) {
         lat_max: 0
     };
     let pg; // p5.Graphics object for off-screen rendering
+    let selectedStyle;
 
     p.setup = function() {
         const container = document.getElementById('p5-container');
@@ -68,7 +69,7 @@ let sketch = function(p) {
 
     p.draw = function() {
         if(!pg) {
-            const selectedStyle = document.getElementById('visual-style').value;
+            selectedStyle = document.getElementById('visual-style').value;
             visualizerParameters = { ...visualizerParameters, ...visualStyles[selectedStyle]};
             
             p.background(visualizerParameters.backgroundColor);
@@ -119,13 +120,20 @@ let sketch = function(p) {
             width: width,
             height: parseInt(width * _aspect),
             antialias: 4,
+            density: 1,
             depth: false,
         };
+        if(pg) {
+            pg.remove();
+            pg = undefined;
+        }
         pg = p.createFramebuffer(options);
+        pg.pixelDensity(1);
 
         p.background(visualizerParameters.backgroundColor);
         pg.begin();
-        p.stroke(0, 0, 0);
+        p.background(visualizerParameters.backgroundColor);
+        p.stroke(visualizerParameters.roadColor);
         p.strokeWeight(3);
         for (let i = 0; i < currentData.length; i++) {
             const item = currentData[i];
@@ -168,13 +176,40 @@ let sketch = function(p) {
         const x = parseFloat(wktx);
         const y = parseFloat(wkty);
         if (isNaN(x) || isNaN(y)) {
-            return { x: 0, y: 0 }; // Return a default value or handle error appropriately
+            return { x: 0, y: 0 };
         } 
         return {
             x:  g.width  * (x - (bbox.lon_min + bbox.lon_max)*0.5) / (bbox.lon_max - bbox.lon_min),
             y: -g.height * (y - (bbox.lat_min + bbox.lat_max)*0.5) / (bbox.lat_max - bbox.lat_min),
         };
     }
+
+    p.saveImage = async function() {
+        if(pg) {
+            pg.loadPixels();
+            const canvas = document.createElement('canvas');
+            canvas.width = pg.width;
+            canvas.height = pg.height;
+            
+            const ctx = canvas.getContext('2d');
+            const imageData = new ImageData(new Uint8ClampedArray(pg.pixels), pg.width, pg.height);
+            ctx.putImageData(imageData, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `visualization${
+                    [bbox.lon_min,bbox.lat_min,bbox.lon_max,bbox.lat_max,selectedStyle].join("-")
+                }.png`;
+                link.click();
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        } else {
+            console.error("Unable to save image: no saveable framebuffer found!")
+        }
+    }
+    
 
     p.updateData = function(newData) {
         currentData = newData;
@@ -199,6 +234,7 @@ p5Instance = new p5(sketch);
 return {
     updateData: (newData) => p5Instance.updateData(newData),
     updateParameters: (newParams) => p5Instance.updateParameters(newParams),
-    renderVisualization: (width, style) => p5Instance.renderViz(width, style)
+    renderVisualization: (width, style) => p5Instance.renderViz(width, style),
+    saveImage: () => p5Instance.saveImage(),
 };
 }
