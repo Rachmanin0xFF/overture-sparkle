@@ -115,6 +115,7 @@ let sketch = function(p) {
     p.renderViz = function(width, selectedStyle) {
         visualizerParameters = { ...visualizerParameters, ...visualStyles[selectedStyle] };
         let _aspect = (bbox.lat_max - bbox.lat_min) / (bbox.lon_max - bbox.lon_min);
+        _aspect /= p.cos(0.0174533*(bbox.lat_max + bbox.lat_min)*0.5);
         
         let options = {
             width: width,
@@ -134,7 +135,7 @@ let sketch = function(p) {
         pg.begin();
         p.background(visualizerParameters.backgroundColor);
         p.stroke(visualizerParameters.roadColor);
-        p.strokeWeight(3);
+        p.strokeWeight(1.5);
         for (let i = 0; i < currentData.length; i++) {
             const item = currentData[i];
             if (item.geometry) {
@@ -146,6 +147,7 @@ let sketch = function(p) {
     }
 
     function drawWKT(wkt, g) {
+        // remove parenthesis, commas
         const arr = wkt.replace(/[(),]/g, "").split(' ');
         switch(arr[0]) {
             case 'POINT':
@@ -186,6 +188,8 @@ let sketch = function(p) {
 
     p.saveImage = async function() {
         if(pg) {
+            // p5's built-in save functions don't work for framebuffers, for some reason
+            // this is the easiest alternative
             pg.loadPixels();
             const canvas = document.createElement('canvas');
             canvas.width = pg.width;
