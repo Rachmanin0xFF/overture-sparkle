@@ -1,0 +1,70 @@
+{
+    "styles": [
+        {
+            "name": "Classic",
+            "format-version": "1.0",
+            "background": {
+                "color": "#f001a39",
+                "z-index": 0
+            },
+            "water": {
+                "color": "#2c2e7f",
+                "fill-color": true,
+                "z-index": 1
+            },
+            "roads": {
+                "stroke-color": "#ffffff",
+                "stroke-weight": 1.5,
+                "z-index": 3,
+                "rules": [
+                    {
+                        "condition": {"class": ["motorway", "primary", "secondary"]},
+                        "style": { "stroke-weight": 4 }
+                    }
+                ]
+            },
+            "buildings": {
+                "fill-color": "#05a5af",
+                "z-index": 5
+            },
+            "places": {
+                "stroke-color": "#4edad8",
+                "z-index": 6
+            }
+
+        }
+        {
+            "name": "Light",
+            "format-version": "1.0",
+            "background": {
+                "color": "#f0f0f0",
+                "z-index": 0
+            },
+            "water": {
+                "color": "#dadada",
+                "fill-color": true,
+                "z-index": 1
+            },
+            "roads": {
+                "stroke-color": "#303030",
+                "stroke-weight": 1.5,
+                "z-index": 3,
+                "rules": [
+                    {
+                        "condition": {"class": ["motorway", "primary", "secondary"]},
+                        "style": { "stroke-weight": 4 }
+                    }
+                ]
+            },
+            "buildings": {
+                "fill-color": "#fafafa",
+                "z-index": 5
+            },
+            "places": {
+                "stroke-color": "#4edad8",
+                "z-index": 6
+            }
+
+        }
+    ]
+}

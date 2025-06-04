@@ -24,11 +24,11 @@ window.addEventListener('queryOverture', async (e) => {
     try {
         const split_array = boundingBox.replace(/[ ()]/g, "").split(',');
         const bbox = split_array.map(Number);
+        visualizer.clear();
 
         const result = await dbManager.queryForVisualization(bbox, 'transportation', 'segment');
         result.bbox = bbox;
         console.log('Query Result:', result);
-        console.log('Query Result:', result[0].geometry);
         visualizer.updateData(result);
         window.uiControls.enableButtons(['query', 'render']);
         window.uiControls.setStatus("Data retrieved", "success");

@@ -53,7 +53,7 @@ let sketch = function(p) {
     p.setup = function() {
         const container = document.getElementById('p5-container');
         let canvas = p.createCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth), p.WEBGL);
-        p.pixelDensity(4);
+        p.pixelDensity(1);
         const placeholder = container.querySelector('.placeholder-text');
         if (placeholder) {
             placeholder.remove();
@@ -129,7 +129,6 @@ let sketch = function(p) {
             pg = undefined;
         }
         pg = p.createFramebuffer(options);
-        pg.pixelDensity(1);
 
         p.background(visualizerParameters.backgroundColor);
         pg.begin();
@@ -233,6 +232,15 @@ let sketch = function(p) {
         p.resizeCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth));
         drawRenderPreview();
     }
+
+    p.clearViz = function() {
+        if(pg) {
+            pg.remove();
+            pg = undefined;
+        }
+        currentData = [];
+        p.background(visualizerParameters.backgroundColor);
+    };
 };
 
 p5Instance = new p5(sketch);
@@ -242,5 +250,6 @@ return {
     updateParameters: (newParams) => p5Instance.updateParameters(newParams),
     renderVisualization: (width, style) => p5Instance.renderViz(width, style),
     saveImage: () => p5Instance.saveImage(),
+    clear: () => p5Instance.clearViz(),
 };
 }
