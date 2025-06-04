@@ -53,7 +53,7 @@ let sketch = function(p) {
     p.setup = function() {
         const container = document.getElementById('p5-container');
         let canvas = p.createCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth), p.WEBGL);
-
+        p.pixelDensity(4);
         const placeholder = container.querySelector('.placeholder-text');
         if (placeholder) {
             placeholder.remove();
@@ -138,6 +138,8 @@ let sketch = function(p) {
         p.strokeWeight(1.5);
         for (let i = 0; i < currentData.length; i++) {
             const item = currentData[i];
+            if(item.class === 'primary' || item.class === 'motorway' || item.class === 'secondary') p.strokeWeight(4);
+            else p.strokeWeight(1.5);
             if (item.geometry) {
                 drawWKT(item.geometry, pg);
             }
