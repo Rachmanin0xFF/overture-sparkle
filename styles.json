@@ -1,70 +1,66 @@
 {
-    "styles": [
-        {
-            "name": "Classic",
-            "format-version": "1.0",
+    "styles": {
+        "classic" : {
+            "format_version": "1.0",
             "background": {
-                "color": "#f001a39",
-                "z-index": 0
+                "color": "#001a39",
+                "z_index": 0
             },
             "water": {
-                "color": "#2c2e7f",
-                "fill-color": true,
-                "z-index": 1
+                "fill_color": "#2c2e7f",
+                "z_index": 1
             },
-            "roads": {
-                "stroke-color": "#ffffff",
-                "stroke-weight": 1.5,
-                "z-index": 3,
+            "segment": {
+                "stroke_color": "#ffffff",
+                "stroke_weight": 1.5,
+                "z_index": 3,
                 "rules": [
                     {
                         "condition": {"class": ["motorway", "primary", "secondary"]},
-                        "style": { "stroke-weight": 4 }
+                        "style": { "stroke_weight": 4 }
                     }
                 ]
             },
-            "buildings": {
-                "fill-color": "#05a5af",
-                "z-index": 5
+            "building": {
+                "fill_color": "#05a5af",
+                "z_index": 5
             },
-            "places": {
-                "stroke-color": "#4edad8",
-                "z-index": 6
+            "place": {
+                "stroke_color": "#4edad8",
+                "z_index": 6
             }
 
         },
-        {
-            "name": "Light",
-            "format-version": "1.0",
+        "light" : {
+            "format_version": "1.0",
             "background": {
                 "color": "#f0f0f0",
-                "z-index": 0
+                "z_index": 0
             },
             "water": {
-                "color": "#dadada",
-                "fill-color": true,
-                "z-index": 1
+                "fill_color": "#dadada",
+                "z_index": 1
             },
-            "roads": {
-                "stroke-color": "#303030",
-                "stroke-weight": 1.5,
-                "z-index": 3,
+            "segment": {
+                "stroke_color": "#303030",
+                "stroke_weight": 1.5,
+                "z_index": 3,
                 "rules": [
                     {
                         "condition": {"class": ["motorway", "primary", "secondary"]},
-                        "style": { "stroke-weight": 4 }
+                        "style": { "stroke_weight": 4 }
                     }
                 ]
             },
-            "buildings": {
-                "fill-color": "#fafafa",
-                "z-index": 5
+            "building": {
+                "fill_color": "#f1a688",
+                "z_index": 5
             },
-            "places": {
-                "stroke-color": "#4edad8",
-                "z-index": 6
+            "place": {
+                "stroke_color": "#4edad8",
+                "z_index": 6
             }
 
         }
-    ]
+    }
 }

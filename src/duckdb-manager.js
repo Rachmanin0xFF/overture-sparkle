@@ -73,8 +73,11 @@ class DuckDBManager {
     async queryOverture(bbox, theme, type, rules=undefined) {
         await this._ensureInitialized();
         const sql = constructQuery(this.manifest, bbox, theme, type, rules);
-        const query_result = await this.executeSQL(sql);
-        return query_result;
+        let queryResult = await this.executeSQL(sql);
+        queryResult.bbox = bbox;
+        queryResult.theme = theme;
+        queryResult.type = type;
+        return queryResult;
     }
     
     async executeSQL(sql) {
@@ -112,7 +115,7 @@ export class DuckDBVisualizationManager extends DuckDBManager {
         const WKTEnvelope = `ST_MakeEnvelope(${bbox.join(', ')})`;
         const rules = [
             () => ({id: 'id'}),
-            () => ({ geometry: theme === 'base' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
+            () => ({ geometry: theme === 'base' && type !== 'bathymetry' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
               ? `CASE 
                     WHEN ST_GeometryType(geometry) = 'POLYGON' 
                     THEN ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))
@@ -134,7 +137,190 @@ export class DuckDBVisualizationManager extends DuckDBManager {
               : {}
           ];
         const sql = constructQuery(this.manifest, bbox, theme, type, rules);
-        const queryResult = await this.executeSQL(sql);
-        return Array.from(queryResult).map(row => ({...row}));
+        let queryResult = await this.executeSQL(sql);
+        let output = Array.from(queryResult).map(row => ({...row}));
+        output.bbox = bbox;
+        output.theme = theme;
+        output.type = type;
+        console.log(`Reply recieved with ${queryResult.length} rows`);
+        return output;
+    }
+}
+
+export class DuckDBPoolManager {
+    constructor(poolSize = 3, release_version = '2025-05-21.0') {
+        this.poolSize = poolSize;
+        this.release_version = release_version;
+        this.pool = [];
+        this.availableInstances = [];
+        this.busyInstances = new Set();
+        this.queryQueue = [];
+        this.isInitialized = false;
+        this.isShuttingDown = false;
+    }
+
+    async initialize() {
+        if (this.isInitialized) return;
+
+        console.log(`Initializing DuckDB pool with ${this.poolSize} instances...`);
+        
+        const initPromises = [];
+        for (let i = 0; i < this.poolSize; i++) {
+            const instance = new DuckDBVisualizationManager(this.release_version);
+            this.pool.push(instance);
+            initPromises.push(instance.initialize());
+        }
+
+        try {
+            await Promise.all(initPromises);
+            this.availableInstances = [...this.pool];
+            this.isInitialized = true;
+            console.log(`DuckDB pool initialized successfully with ${this.poolSize} instances`);
+        } catch (error) {
+            console.error('Failed to initialize DuckDB pool:', error);
+            throw error;
+        }
+    }
+
+    async _ensureInitialized() {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
+    }
+
+    async queryForVisualization(bbox, theme, type) {
+        await this._ensureInitialized();
+
+        return new Promise((resolve, reject) => {
+            const queryTask = {
+                bbox,
+                theme,
+                type,
+                resolve,
+                reject,
+                timestamp: Date.now()
+            };
+
+            this.queryQueue.push(queryTask);
+            this._processQueue();
+        });
+    }
+
+    async executeSQL(sql) {
+        await this._ensureInitialized();
+
+        return new Promise((resolve, reject) => {
+            const queryTask = {
+                sql,
+                resolve,
+                reject,
+                timestamp: Date.now(),
+                type: 'raw_sql'
+            };
+
+            this.queryQueue.push(queryTask);
+            this._processQueue();
+        });
+    }
+
+    _processQueue() {
+        // Process as many queued tasks as we have available instances
+        while (this.queryQueue.length > 0 && this.availableInstances.length > 0) {
+            const task = this.queryQueue.shift();
+            const instance = this.availableInstances.pop();
+            
+            this.busyInstances.add(instance);
+            this._executeTask(instance, task);
+        }
+    }
+
+    async _executeTask(instance, task) {
+        try {
+            let result;
+            
+            if (task.type === 'raw_sql') {
+                result = await instance.executeSQL(task.sql);
+            } else {
+                result = await instance.queryForVisualization(task.bbox, task.theme, task.type);
+            }
+            
+            task.resolve(result);
+        } catch (error) {
+            console.error('Query execution failed:', error);
+            task.reject(error);
+        } finally {
+            // Return instance to available pool
+            this.busyInstances.delete(instance);
+            if (!this.isShuttingDown) {
+                this.availableInstances.push(instance);
+                // Process any remaining queued tasks
+                this._processQueue();
+            }
+        }
+    }
+
+    // Get pool statistics
+    getPoolStats() {
+        return {
+            poolSize: this.poolSize,
+            availableInstances: this.availableInstances.length,
+            busyInstances: this.busyInstances.size,
+            queuedTasks: this.queryQueue.length,
+            isInitialized: this.isInitialized
+        };
+    }
+
+    // Get the current queue length
+    getQueueLength() {
+        return this.queryQueue.length;
+    }
+
+    // Check if all instances are busy
+    isFullyUtilized() {
+        return this.availableInstances.length === 0 && this.busyInstances.size === this.poolSize;
+    }
+
+    // Wait for all current tasks to complete
+    async waitForAllTasks() {
+        while (this.queryQueue.length > 0 || this.busyInstances.size > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+
+    // Clear the queue (cancel pending tasks)
+    clearQueue() {
+        const canceledTasks = this.queryQueue.splice(0);
+        canceledTasks.forEach(task => {
+            task.reject(new Error('Task canceled - queue was cleared'));
+        });
+        return canceledTasks.length;
+    }
+
+    // Gracefully shutdown the pool
+    async shutdown() {
+        console.log('Shutting down DuckDB pool...');
+        this.isShuttingDown = true;
+
+        // Cancel any pending tasks
+        const canceledCount = this.clearQueue();
+        if (canceledCount > 0) {
+            console.log(`Canceled ${canceledCount} pending tasks`);
+        }
+
+        // Wait for active tasks to complete
+        await this.waitForAllTasks();
+
+        // Close all database connections
+        const closePromises = this.pool.map(instance => instance.close());
+        await Promise.all(closePromises);
+
+        // Reset state
+        this.pool = [];
+        this.availableInstances = [];
+        this.busyInstances.clear();
+        this.isInitialized = false;
+        this.isShuttingDown = false;
+
+        console.log('DuckDB pool shutdown complete');
     }
 }

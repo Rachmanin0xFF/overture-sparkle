@@ -4,11 +4,6 @@ let currentData = initialData;
 let p5Instance;
 
 let sketch = function(p) {
-    let visualizerParameters = {
-        backgroundColor: '#ffffff',
-        strokeColor: '#000000',
-        fillColor: '#ff0000'
-    };
     // Colors in the April 2024 Overture Brand Guidelines:
     // Primaries:
     // - #2c2e7f
@@ -24,23 +19,8 @@ let sketch = function(p) {
     // - #ffffff
     // Dark:
     // - #001a39
-    let visualStyles = {
-        'classic': {
-            backgroundColor: '#001a39',
-            waterColor: '#2c2e7f',
-            groundCoverColor: '#05a5af',
-            roadColor: '#ffffff',
-            emphasisColor: '#4edad8',
-        },
-        'light': {
-            backgroundColor: '#f0f0f0',
-            waterColor: '#a0c0ff',
-            groundCoverColor: '#c0ffc0',
-            roadColor: '#404040',
-            emphasisColor: '#ff8080',
-        },
-    }
     let loadingLerp = 0.0; // eased loading boolean for animation
+    // current geometry bbox
     let bbox = {
         lon_min: 0,
         lat_min: 0,
@@ -49,8 +29,11 @@ let sketch = function(p) {
     };
     let pg; // p5.Graphics object for off-screen rendering
     let selectedStyle;
+    let styles;
+    let rendering = false;
 
-    p.setup = function() {
+    p.setup = function(stylePath = './styles.json') {
+        // ========== p5 canvas and DOM setup ========== //
         const container = document.getElementById('p5-container');
         let canvas = p.createCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth), p.WEBGL);
         p.pixelDensity(1);
@@ -59,27 +42,38 @@ let sketch = function(p) {
             placeholder.remove();
         }
         canvas.parent('p5-container');
-        p.background(visualizerParameters.backgroundColor);
+        p.background(255);
         console.log("p5.js sketch initialized with data:", currentData);
 
+        // ========== Font ========== //
         let font = p.loadFont('Montserrat-Light.ttf');
         p.textFont(font);
         p.textSize(24);
     };
 
+    p.init = async function() {
+        await loadStyles();
+    }
+
+    async function loadStyles(stylePath = './styles.json') {
+        // ========== Styles ========== //
+        const response = await fetch(stylePath);
+        styles = (await response.json()).styles;
+    }
+
     p.draw = function() {
-        if(!pg) {
-            selectedStyle = document.getElementById('visual-style').value;
-            visualizerParameters = { ...visualizerParameters, ...visualStyles[selectedStyle]};
-            
-            p.background(visualizerParameters.backgroundColor);
+        if(styles) {
+            selectedStyle = styles[document.getElementById('visual-style').value];
+            p.background(selectedStyle.background.color);
+        }
+        if(!pg && styles) {
             p.textAlign(p.CENTER, p.CENTER);
-            const col = p.color(visualizerParameters.roadColor);
+            const col = p.color(selectedStyle.segment.stroke_color);
             col.setAlpha(255 * loadingLerp);
             p.fill(col);
-            p.text("This could take a few minutes...", 0, 80);
+            p.text("This might take a minute...", 0, 80);
 
-            function drawLoadingOrbs(keys) {
+            function drawLoadingOrbs(colors) {
                 if(window.uiControls.isLoading()) {
                     loadingLerp = p.lerp(loadingLerp, 1.0, 0.05);
                 } else {
@@ -87,18 +81,26 @@ let sketch = function(p) {
                 }
                 let padding = 50;
                 p.noStroke();
-                let xi = -p.width / 2.0 + 2.0 * p.width / (keys.length + 4);
+                let xi = -p.width / 2.0 + 2.0 * p.width / (colors.length + 4);
                 let i = 0;
-                keys.forEach(key => {
-                    const color = visualizerParameters[key];
+                colors.forEach(color => {
                     p.fill(color);
                     let yoff = -loadingLerp * 50.0 * p.sqrt(p.max(0.0, p.sin(p.frameCount / 20.0 + i)));
                     p.ellipse(xi + padding, yoff, 30, 30);
-                    xi += (p.width / (keys.length + 4));
+                    xi += (p.width / (colors.length + 4));
                     i += 1;
                 });
             }
-            drawLoadingOrbs(['waterColor', 'groundCoverColor', 'roadColor', 'emphasisColor']);
+            drawLoadingOrbs([
+                selectedStyle.water.fill_color,
+                selectedStyle.building.fill_color,
+                selectedStyle.segment.stroke_color,
+                selectedStyle.place.stroke_color
+            ]);
+        }
+        if(rendering) {
+            render();
+            drawRenderPreview();
         }
     };
 
@@ -112,8 +114,9 @@ let sketch = function(p) {
         }
     }
 
-    p.renderViz = function(width, selectedStyle) {
-        visualizerParameters = { ...visualizerParameters, ...visualStyles[selectedStyle] };
+    let renderStyle;
+    p.renderViz = function(width, styleName) {
+        renderStyle = styles[styleName];
         let _aspect = (bbox.lat_max - bbox.lat_min) / (bbox.lon_max - bbox.lon_min);
         _aspect /= p.cos(0.0174533*(bbox.lat_max + bbox.lat_min)*0.5);
         
@@ -128,39 +131,82 @@ let sketch = function(p) {
             pg.remove();
             pg = undefined;
         }
-        pg = p.createFramebuffer(options);
+        pg = p.createFramebuffer(options); // pass this to drawWKT
 
-        p.background(visualizerParameters.backgroundColor);
+        p.background(renderStyle.background.color);
         pg.begin();
-        p.background(visualizerParameters.backgroundColor);
-        p.stroke(visualizerParameters.roadColor);
+        p.background(renderStyle.background.color);
+        p.stroke(0);
         p.strokeWeight(1.5);
-        for (let i = 0; i < currentData.length; i++) {
-            const item = currentData[i];
-            if(item.class === 'primary' || item.class === 'motorway' || item.class === 'secondary') p.strokeWeight(4);
-            else p.strokeWeight(1.5);
-            if (item.geometry) {
-                drawWKT(item.geometry, pg);
-            }
-        }
         pg.end();
         drawRenderPreview();
+        
+        rendering = true;
+        layerIndex = 0;
+        itemIndex = 0;
+        // dump all the keys from selectedStyle into layerEnumeration
+        layerEnumeration = Object.keys(renderStyle);
+        console.log(layerEnumeration);
     }
 
-    function drawWKT(wkt, g) {
+    let layerIndex = 0;
+    let itemIndex = 0;
+    let batchSize = 1000;
+    let layerEnumeration = [];
+    function render() {
+        const dictionary = Object.fromEntries(
+            currentData.map(item => [item.name, item])
+        );
+        console.log("hey");
+        console.log(currentData);
+        console.log(layerEnumeration[layerIndex]);
+        switch(layerEnumeration[layerIndex]) {
+            case 'background':
+                // skip background layer, already drawn
+                layerIndex++;
+                break;
+            case 'format_version':
+                // not a layer, skip
+                layerIndex++;
+                break;
+            default:
+                if(layerIndex >= layerEnumeration.length) {
+                    // all layers rendered, stop rendering
+                    rendering = false;
+                    console.log("Rendering complete.");
+                    return;
+                } else {
+                    const themeName = layerEnumeration[layerIndex];
+                    const themeStyle = renderStyle[themeName];
+                    console.log(themeName, themeStyle);
+                    for(let i = 0; i < batchSize; i++) {
+                        if(itemIndex >= dictionary[layerEnumeration[layerIndex]].length) {
+                            layerIndex++;
+                            return;
+                        }
+                        const item = dictionary[layerEnumeration[layerIndex]][itemIndex];
+                        itemIndex++;
+                    }
+                }
+                break;
+
+        }
+    }
+
+    function drawWKT(wkt, g, z) {
         // remove parenthesis, commas
         const arr = wkt.replace(/[(),]/g, "").split(' ');
         switch(arr[0]) {
             case 'POINT':
-                const v = parseVertex(arr[i], arr[i+1], g);
-                p.point(v.x, v.y, 10, 10);
+                const v = parseVertex(arr[1], arr[2], g);
+                p.point(v.x, v.y, z);
                 break;
             case 'LINESTRING':
                 p.noFill();
                 p.beginShape();
                 for (let i = 1; i < arr.length; i += 2) {
                     const v = parseVertex(arr[i], arr[i+1], g);
-                    p.vertex(v.x, v.y);
+                    p.vertex(v.x, v.y, z);
                 }
                 p.endShape();
                 break;
@@ -168,7 +214,7 @@ let sketch = function(p) {
                 p.beginShape();
                 for (let i = 1; i < arr.length; i += 2) {
                     const v = parseVertex(arr[i], arr[i + 1], g);
-                    p.vertex(v.x, v.y);
+                    p.vertex(v.x, v.y, z);
                 }
                 p.endShape(p.CLOSE);
                 break;
@@ -218,13 +264,7 @@ let sketch = function(p) {
 
     p.updateData = function(newData) {
         currentData = newData;
-        console.log("Visualizer data updated:", currentData);
         [bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max] = currentData.bbox;
-    };
-
-    p.updateParameters = function(newParams) {
-        visualizerParameters = { ...visualizerParameters, ...newParams };
-        console.log("Visualizer parameters updated:", visualizerParameters);
     };
 
     p.windowResized = function() {
@@ -239,7 +279,7 @@ let sketch = function(p) {
             pg = undefined;
         }
         currentData = [];
-        p.background(visualizerParameters.backgroundColor);
+        p.background(selectedStyle.background.color);
     };
 };
 
@@ -251,5 +291,6 @@ return {
     renderVisualization: (width, style) => p5Instance.renderViz(width, style),
     saveImage: () => p5Instance.saveImage(),
     clear: () => p5Instance.clearViz(),
+    init: () => p5Instance.init(),
 };
 }

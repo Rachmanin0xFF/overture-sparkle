@@ -1,12 +1,15 @@
-import { DuckDBVisualizationManager } from './duckdb-manager.js';
+import { DuckDBPoolManager } from './duckdb-manager.js';
 import {  createVisualizer } from './visualizer.js';
 
 window.uiControls.disableAllButtons();
 window.uiControls.setStatus("Initializing DuckDB...", "loading");
 
-const dbManager = new DuckDBVisualizationManager();
+// 5 instances should be fine (hope everyone's memory is okay)
+const dbManager = new DuckDBPoolManager(3, '2025-05-21.0');
 await dbManager.initialize();
+
 let visualizer = createVisualizer();
+await visualizer.init();
 
 window.uiControls.setStatus("Ready to query", "success");
 
@@ -26,10 +29,17 @@ window.addEventListener('queryOverture', async (e) => {
         const bbox = split_array.map(Number);
         visualizer.clear();
 
-        const result = await dbManager.queryForVisualization(bbox, 'transportation', 'segment');
-        result.bbox = bbox;
-        console.log('Query Result:', result);
-        visualizer.updateData(result);
+        const results = await Promise.all([
+            dbManager.queryForVisualization(bbox, 'transportation', 'segment'),
+            dbManager.queryForVisualization(bbox, 'places', 'place'),
+            dbManager.queryForVisualization(bbox, 'base', 'land'),
+            dbManager.queryForVisualization(bbox, 'base', 'water'),
+            dbManager.queryForVisualization(bbox, 'base', 'land_cover'),
+            dbManager.queryForVisualization(bbox, 'base', 'bathymetry'),
+        ]);
+        results.bbox = bbox;
+        console.log("Queries completed:", results);
+        visualizer.updateData(results);
         window.uiControls.enableButtons(['query', 'render']);
         window.uiControls.setStatus("Data retrieved", "success");
     } catch (error) {
