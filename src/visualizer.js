@@ -63,11 +63,25 @@ let sketch = function(p) {
         // ========== Styles ========== //
         const response = await fetch(stylePath);
         styles = (await response.json()).styles;
+        p.loadStyleSelection();
+    }
+
+    p.loadStyleSelection = function() {
+        selectedStyle = styles[document.getElementById('visual-style').value];
+        window.jsonEditor.setValue(JSON.stringify(selectedStyle, null, 2));
     }
 
     p.draw = function() {
         if(styles) {
-            selectedStyle = styles[document.getElementById('visual-style').value];
+            const editorElement = window.jsonEditor.getWrapperElement();
+            try {
+                selectedStyle = JSON.parse(window.jsonEditor.getValue());
+                editorElement.style.border = "2px solid green";
+            } catch(error) {
+                // set jsonEditor border to red
+                editorElement.style.border = "2px solid red";
+
+            }
             p.background(selectedStyle.background.color);
         }
         if(!pg && styles) {
@@ -119,8 +133,8 @@ let sketch = function(p) {
     }
 
     let renderStyle;
-    p.renderViz = function(width, styleName) {
-        renderStyle = styles[styleName];
+    p.renderViz = function(width, style) {
+        renderStyle = style;
         let _aspect = (bbox.lat_max - bbox.lat_min) / (bbox.lon_max - bbox.lon_min);
         _aspect /= p.cos(0.0174533*(bbox.lat_max + bbox.lat_min)*0.5);
         
@@ -212,7 +226,7 @@ let sketch = function(p) {
     }
 
     function parseRule(rule, item) {
-        console.log(rule, item);
+        
     }
 
     function applyStyle(style) {
@@ -328,5 +342,6 @@ return {
     saveImage: () => p5Instance.saveImage(),
     clear: () => p5Instance.clearViz(),
     init: () => p5Instance.init(),
+    styleMenuChange: () => p5Instance.loadStyleSelection()
 };
 }

@@ -72,3 +72,11 @@ window.addEventListener('saveImage', async (e) => {
         console.error('Image save failed:', error);
     }
 });
+
+window.addEventListener('styleMenuChange', async (e) => {
+    try {
+        visualizer.styleMenuChange();
+    } catch (error) {
+        console.error('Image save failed:', error);
+    }
+});

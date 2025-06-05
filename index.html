@@ -6,6 +6,7 @@
     <title>overture-sparkle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.10.0/p5.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <style>
         * {
             box-sizing: border-box;
@@ -53,6 +54,45 @@
             gap: 0;
             min-height: 600px;
         }
+        
+        #editor-container {
+            display: block;
+            grid-column: span 2;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 30px;
+            padding-top: 15px;
+            min-width: 0;
+        }
+
+        #editor-container label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #json-editor {
+            margin-bottom: 25px;
+            padding: 12px 16px;
+            display: block;
+        }
+
+        .CodeMirror {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            height: 500px;
+            background: white;
+        }
+
+        .CodeMirror-focused {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
 
         .controls-panel {
             background: #f8f9fa;
@@ -65,7 +105,7 @@
             margin-bottom: 25px;
         }
 
-        .control-group label {
+        label {
             display: block;
             font-weight: 600;
             color: #2c3e50;
@@ -203,12 +243,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            max-width: 100%; /* add this */
+            max-width: 100%;
         }
 
         #p5-container canvas {
-            max-width: 100%; /* add this */
-            height: auto; /* add this */
+            max-width: 100%;
+            height: auto;
         }
 
         .placeholder-text {
@@ -254,7 +294,7 @@
             }
 
             #p5-container {
-                min-width: 0; /* override the 400px min-width */
+                min-width: 0;
                 width: 100%;
                 border: 0;
             }
@@ -334,21 +374,42 @@
                     </div>
                 </div>
             </div>
+
+            <div id="editor-container">
+                <label for="json-editor">JSON Style Editor</label>
+                <textarea id="json-editor"></textarea>
+            </div>
         </div>
     </div>
-
     <script type="module" src="/src/main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
     <script>
+        // Initialize CodeMirror after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = CodeMirror.fromTextArea(document.getElementById('json-editor'), {
+                mode: 'application/json',
+                theme: 'default',
+                lineNumbers: true,
+                indentUnit: 2,
+                tabSize: 2,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                value: ''
+            });
+            
+            // Make editor accessible globally if needed
+            window.jsonEditor = editor;
+        });
+
         // UI Control Functions
         window.uiControls = {
             setStatus: function(message, type = 'default') {
                 const statusEl = document.getElementById('status-text');
                 statusEl.textContent = message;
                 
-                // Remove existing status classes
                 statusEl.classList.remove('status-loading', 'status-success', 'status-error');
                 
-                // Add appropriate class
                 if (type === 'loading') statusEl.classList.add('status-loading');
                 else if (type === 'success') statusEl.classList.add('status-success');
                 else if (type === 'error') statusEl.classList.add('status-error');
@@ -387,7 +448,6 @@
             const boundingBox = document.getElementById('bounding-box').value;
             const style = document.getElementById('visual-style').value;
             
-            // Dispatch custom event that your main.js can listen for
             window.dispatchEvent(new CustomEvent('queryOverture', {
                 detail: { boundingBox, style }
             }));
@@ -395,7 +455,7 @@
 
         document.getElementById('render-btn').addEventListener('click', function() {
             const width = parseInt(document.getElementById('width').value);
-            const style = document.getElementById('visual-style').value;
+            const style = JSON.parse(window.jsonEditor.getValue());
             
             window.dispatchEvent(new CustomEvent('renderVisualization', {
                 detail: { width, style }
@@ -404,6 +464,10 @@
 
         document.getElementById('save-btn').addEventListener('click', function() {
             window.dispatchEvent(new CustomEvent('saveImage'));
+        });
+
+        document.getElementById('visual-style').addEventListener('change', function() {
+            window.dispatchEvent(new CustomEvent('styleMenuChange'));
         });
     </script>
 </body>

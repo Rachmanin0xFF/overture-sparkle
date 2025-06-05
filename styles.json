@@ -47,6 +47,10 @@
                 "fill_color": "#dadada",
                 "z_index": 1
             },
+            "land_cover": {
+                "stroke_color": "#ff000033",
+                "z_index": 2
+            },
             "segment": {
                 "stroke_color": "#303030",
                 "stroke_weight": 1.5,
