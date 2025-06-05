@@ -119,7 +119,7 @@ export class DuckDBVisualizationManager extends DuckDBManager {
               ? `CASE 
                     WHEN ST_GeometryType(geometry) != 'LINESTRING'
                     THEN ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))
-                    ELSE ST_AsText(${WKTEnvelope})
+                    ELSE ST_AsText(geometry)
                     END`
               : `ST_AsText(geometry)` 
             }),

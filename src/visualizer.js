@@ -35,7 +35,11 @@ let sketch = function(p) {
     p.setup = function(stylePath = './styles.json') {
         // ========== p5 canvas and DOM setup ========== //
         const container = document.getElementById('p5-container');
-        let canvas = p.createCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth), p.WEBGL);
+        let canvas = p.createCanvas(
+            p.floor(container.offsetWidth),
+            p.floor(p.min(container.offsetHeight, container.offsetWidth)),
+            p.WEBGL
+        );
         p.pixelDensity(1);
         const placeholder = container.querySelector('.placeholder-text');
         if (placeholder) {
@@ -284,7 +288,10 @@ let sketch = function(p) {
 
     p.windowResized = function() {
         const container = document.getElementById('p5-container');
-        p.resizeCanvas(container.offsetWidth, p.min(container.offsetHeight, container.offsetWidth));
+        p.resizeCanvas(
+            p.floor(container.offsetWidth),
+            p.floor(p.min(container.offsetHeight, container.offsetWidth))
+        );
         drawRenderPreview();
     }
 
