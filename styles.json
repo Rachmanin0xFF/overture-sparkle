@@ -31,7 +31,7 @@
                 "z_index": 5
             },
             "place": {
-                "stroke_color": "#00e4df22",
+                "stroke_color": "#00e4df",
                 "z_index": 6,
                 "stroke_weight": 1
             }
@@ -63,7 +63,7 @@
                 "z_index": 5
             },
             "place": {
-                "stroke_color": "#4edad8",
+                "stroke_color": "#4edad800",
                 "z_index": 6
             }
 

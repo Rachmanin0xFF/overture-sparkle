@@ -181,15 +181,11 @@ let sketch = function(p) {
                     const themeName = layerEnumeration[layerIndex];
                     const themeStyle = renderStyle[themeName];
                     
-                    let z;
                     p.noStroke();
                     p.noFill();
                     p.strokeWeight(1);
+                    let z = applyStyle(themeStyle);
                     
-                    z = themeStyle.z_index ? themeStyle.z_index : 0;
-                    if(themeStyle.fill_color)    p.fill(themeStyle.fill_color);
-                    if(themeStyle.stroke_color)        p.stroke(themeStyle.stroke_color);
-                    if(themeStyle.stroke_weight) p.strokeWeight(themeStyle.stroke_weight);
 
                     for(let i = 0; i < batchSize; i++) {
                         if(itemIndex >= dictionary[layerEnumeration[layerIndex]].length) {
@@ -199,6 +195,11 @@ let sketch = function(p) {
                             return;
                         }
                         const item = dictionary[layerEnumeration[layerIndex]][itemIndex];
+                        if(themeStyle.rules) {
+                            for(const rule of themeStyle.rules) {
+                                parseRule(rule, item);
+                            }
+                        }
                         if(item.geometry) drawWKT(item.geometry, pg, z);
                         itemIndex++;
                     }
@@ -210,6 +211,17 @@ let sketch = function(p) {
         drawRenderPreview();
     }
 
+    function parseRule(rule, item) {
+        console.log(rule, item);
+    }
+
+    function applyStyle(style) {
+        if(style.fill_color)    p.fill(style.fill_color);
+        if(style.stroke_color)        p.stroke(style.stroke_color);
+        if(style.stroke_weight) p.strokeWeight(style.stroke_weight);
+        return style.z_index ? style.z_index : 0;
+    }
+
     function drawWKT(wkt, g, z) {
         // remove parenthesis, commas
         const arr = wkt.replace(/[(),]/g, "").split(' ');
@@ -219,12 +231,14 @@ let sketch = function(p) {
                 p.point(v.x, v.y, z);
                 break;
             case 'LINESTRING':
-                p.beginShape();
+                const vArr = [];
                 for (let i = 1; i < arr.length; i += 2) {
                     const v = parseVertex(arr[i], arr[i+1], g);
-                    p.vertex(v.x, v.y, z);
+                    vArr.push(v);
                 }
-                p.endShape();
+                for (let i = 0; i < vArr.length-1; i++) {
+                    p.line(vArr[i].x, vArr[i].y, z, vArr[i+1].x, vArr[i+1].y, z);
+                }
                 break;
             case 'POLYGON':
                 p.beginShape();

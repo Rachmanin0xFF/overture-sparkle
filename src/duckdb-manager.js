@@ -116,11 +116,7 @@ export class DuckDBVisualizationManager extends DuckDBManager {
         const rules = [
             () => ({id: 'id'}),
             () => ({ geometry: theme === 'base' && type !== 'bathymetry' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
-              ? `CASE 
-                    WHEN ST_GeometryType(geometry) != 'LINESTRING'
-                    THEN ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))
-                    ELSE ST_AsText(geometry)
-                    END`
+              ? `unnest(ST_Dump(ST_Intersection(geometry, ${WKTEnvelope})), recursive := true)`
               : `ST_AsText(geometry)` 
             }),
             
@@ -137,12 +133,22 @@ export class DuckDBVisualizationManager extends DuckDBManager {
               : {}
           ];
         const sql = constructQuery(this.manifest, bbox, theme, type, rules);
-        let queryResult = await this.executeSQL(sql);
+        const sqlWKT = `SELECT 
+            * EXCLUDE (geom),
+            CASE 
+            WHEN ST_GeometryType(geom) = 'POLYGON' AND ST_NPoints(ST_ExteriorRing(geom)) >= 4
+            THEN ST_AsText(ST_MakePolygon(ST_ExteriorRing(geom)))
+            ELSE ST_AsText(geom)
+            END AS geometry
+        FROM (
+            ${sql}
+        ) AS subquery;`
+        let queryResult = await this.executeSQL(theme === 'base' && type !== 'bathymetry' ? sqlWKT : sql);
         let output = Array.from(queryResult).map(row => ({...row}));
         output.bbox = bbox;
         output.theme = theme;
         output.type = type;
-        console.log(`Reply recieved with ${queryResult.length} rows`);
+        console.log(`Reply received with ${queryResult.length} rows`);
         return output;
     }
 }
