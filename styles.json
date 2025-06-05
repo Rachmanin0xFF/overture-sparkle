@@ -10,6 +10,10 @@
                 "fill_color": "#2c2e7f",
                 "z_index": 1
             },
+            "land": {
+                "fill_color": "#001a39",
+                "z_index": 2
+            },
             "segment": {
                 "stroke_color": "#ffffff",
                 "stroke_weight": 1.5,
@@ -40,6 +44,10 @@
             "water": {
                 "fill_color": "#dadada",
                 "z_index": 1
+            },
+            "land": {
+                "fill_color": "#f0f0f0",
+                "z_index": 2
             },
             "segment": {
                 "stroke_color": "#303030",

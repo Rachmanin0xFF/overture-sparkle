@@ -117,7 +117,7 @@ export class DuckDBVisualizationManager extends DuckDBManager {
             () => ({id: 'id'}),
             () => ({ geometry: theme === 'base' && type !== 'bathymetry' // Base themes contain polygons with holes (sometimes) -- TODO explode holes
               ? `CASE 
-                    WHEN ST_GeometryType(geometry) = 'POLYGON' 
+                    WHEN ST_GeometryType(geometry) != 'LINESTRING'
                     THEN ST_AsText(ST_ExteriorRing(ST_Intersection(geometry, ${WKTEnvelope})))
                     ELSE ST_AsText(${WKTEnvelope})
                     END`

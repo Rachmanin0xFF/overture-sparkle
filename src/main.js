@@ -32,6 +32,7 @@ window.addEventListener('queryOverture', async (e) => {
         const results = await Promise.all([
             dbManager.queryForVisualization(bbox, 'transportation', 'segment'),
             dbManager.queryForVisualization(bbox, 'places', 'place'),
+            dbManager.queryForVisualization(bbox, 'buildings', 'building'),
             dbManager.queryForVisualization(bbox, 'base', 'land'),
             dbManager.queryForVisualization(bbox, 'base', 'water'),
             dbManager.queryForVisualization(bbox, 'base', 'land_cover'),

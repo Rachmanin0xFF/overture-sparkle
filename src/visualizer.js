@@ -100,8 +100,8 @@ let sketch = function(p) {
         }
         if(rendering) {
             render();
-            drawRenderPreview();
         }
+        if(pg) drawRenderPreview();
     };
 
     function drawRenderPreview() {
@@ -125,7 +125,7 @@ let sketch = function(p) {
             height: parseInt(width * _aspect),
             antialias: 4,
             density: 1,
-            depth: false,
+            depth: true,
         };
         if(pg) {
             pg.remove();
@@ -155,14 +155,11 @@ let sketch = function(p) {
     let layerEnumeration = [];
     function render() {
         const dictionary = Object.fromEntries(
-            currentData.map(item => [item.name, item])
+            currentData.map(item => [item.type, item])
         );
-        console.log("hey");
-        console.log(currentData);
-        console.log(layerEnumeration[layerIndex]);
+        pg.begin();
         switch(layerEnumeration[layerIndex]) {
             case 'background':
-                // skip background layer, already drawn
                 layerIndex++;
                 break;
             case 'format_version':
@@ -174,23 +171,39 @@ let sketch = function(p) {
                     // all layers rendered, stop rendering
                     rendering = false;
                     console.log("Rendering complete.");
+                    pg.end();
                     return;
                 } else {
                     const themeName = layerEnumeration[layerIndex];
                     const themeStyle = renderStyle[themeName];
-                    console.log(themeName, themeStyle);
+                    
+                    let z;
+                    p.noStroke();
+                    p.noFill();
+                    p.strokeWeight(1);
+                    
+                    z = themeStyle.z_index ? themeStyle.z_index : 0;
+                    if(themeStyle.fill_color)    p.fill(themeStyle.fill_color);
+                    if(themeStyle.stroke_color)        p.stroke(themeStyle.stroke_color);
+                    if(themeStyle.stroke_weight) p.strokeWeight(themeStyle.stroke_weight);
+
                     for(let i = 0; i < batchSize; i++) {
                         if(itemIndex >= dictionary[layerEnumeration[layerIndex]].length) {
                             layerIndex++;
+                            itemIndex = 0;
+                            pg.end();
                             return;
                         }
                         const item = dictionary[layerEnumeration[layerIndex]][itemIndex];
+                        if(item.geometry) drawWKT(item.geometry, pg, z);
                         itemIndex++;
                     }
                 }
                 break;
 
         }
+        pg.end();
+        drawRenderPreview();
     }
 
     function drawWKT(wkt, g, z) {
@@ -202,7 +215,6 @@ let sketch = function(p) {
                 p.point(v.x, v.y, z);
                 break;
             case 'LINESTRING':
-                p.noFill();
                 p.beginShape();
                 for (let i = 1; i < arr.length; i += 2) {
                     const v = parseVertex(arr[i], arr[i+1], g);
@@ -217,6 +229,9 @@ let sketch = function(p) {
                     p.vertex(v.x, v.y, z);
                 }
                 p.endShape(p.CLOSE);
+                break;
+            default:
+                console.error("Failed to display WKT: ", wkt);
                 break;
         }
     }
