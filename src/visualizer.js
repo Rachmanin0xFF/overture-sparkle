@@ -76,51 +76,68 @@ let sketch = function(p) {
             const editorElement = window.jsonEditor.getWrapperElement();
             try {
                 selectedStyle = JSON.parse(window.jsonEditor.getValue());
-                editorElement.style.border = "2px solid green";
+                editorElement.style.border = "2px solid #2ed1b9";
             } catch(error) {
                 // set jsonEditor border to red
-                editorElement.style.border = "2px solid red";
+                editorElement.style.border = "2px solid #e8384c";
 
             }
             p.background(selectedStyle.background.color);
         }
         if(!pg && styles) {
             p.textAlign(p.CENTER, p.CENTER);
-            const col = p.color(selectedStyle.segment.stroke_color);
+            const col = p.color(200);
             col.setAlpha(255 * loadingLerp);
             p.fill(col);
             p.text("This might take a minute...", 0, 80);
 
-            function drawLoadingOrbs(colors) {
-                if(window.uiControls.isLoading()) {
-                    loadingLerp = p.lerp(loadingLerp, 1.0, 0.05);
-                } else {
-                    loadingLerp = p.lerp(loadingLerp, 0.0, 0.2);
-                }
-                let padding = 50;
-                p.noStroke();
-                let xi = -p.width / 2.0 + 2.0 * p.width / (colors.length + 4);
-                let i = 0;
-                colors.forEach(color => {
-                    p.fill(color);
-                    let yoff = -loadingLerp * 50.0 * p.sqrt(p.max(0.0, p.sin(p.frameCount / 20.0 + i)));
-                    p.ellipse(xi + padding, yoff, 30, 30);
-                    xi += (p.width / (colors.length + 4));
-                    i += 1;
-                });
-            }
-            drawLoadingOrbs([
-                selectedStyle.water.fill_color,
-                selectedStyle.building.fill_color,
-                selectedStyle.segment.stroke_color,
-                selectedStyle.place.stroke_color
-            ]);
+            drawLoadingOrbs(selectedStyle);
         }
         if(rendering) {
             render();
         }
         if(pg) drawRenderPreview();
+        if(rendering) {
+            p.fill(0);
+            p.noStroke();
+            p.rect(-p.width*0.25, -10, p.width*0.5, 20);
+            p.fill(255);
+            p.rect(-p.width*0.25, -10, p.width*0.5*(entriesSoFar*1.0 / totalEntries), 20);
+        }
     };
+
+    function drawLoadingOrbs(style) {
+        let names = Object.keys(style);
+        
+        let orbs = [];
+        for(let i = 0; i < names.length; i++) {
+            let theme = style[names[i]];
+            if(theme.fill_color || theme.stroke_color) {
+                orbs.push(theme);
+            }
+        }
+
+        if(window.uiControls.isLoading()) {
+            loadingLerp = p.lerp(loadingLerp, 1.0, 0.05);
+        } else {
+            loadingLerp = p.lerp(loadingLerp, 0.0, 0.2);
+        }
+        let padding = 50;
+        p.noStroke();
+        let xi = -p.width / 2.0 + 2.0 * p.width / (orbs.length + 4);
+        let i = 0;
+        orbs.forEach(orb => {
+            p.strokeWeight(1);
+            p.noStroke();
+            p.noFill();
+            applyStyle(orb);
+            
+            let yoff = -loadingLerp * 50.0 * p.sqrt(p.max(0.0, p.sin(p.frameCount / 20.0 + i)));
+            p.ellipse(xi + padding, yoff, 30, 30);
+            xi += (p.width / (orbs.length + 4));
+            i += 1;
+        });
+    }
 
     function drawRenderPreview() {
         if(pg) {
@@ -171,6 +188,8 @@ let sketch = function(p) {
     let itemIndex = 0;
     let batchSize = 1000;
     let layerEnumeration = [];
+    let totalEntries = 0;
+    let entriesSoFar = 0;
     function render() {
         const dictionary = Object.fromEntries(
             currentData.map(item => [item.type, item])
@@ -194,12 +213,6 @@ let sketch = function(p) {
                 } else {
                     const themeName = layerEnumeration[layerIndex];
                     const themeStyle = renderStyle[themeName];
-                    
-                    p.noStroke();
-                    p.noFill();
-                    p.strokeWeight(1);
-                    let z = applyStyle(themeStyle);
-                    
 
                     for(let i = 0; i < batchSize; i++) {
                         if(itemIndex >= dictionary[layerEnumeration[layerIndex]].length) {
@@ -209,13 +222,19 @@ let sketch = function(p) {
                             return;
                         }
                         const item = dictionary[layerEnumeration[layerIndex]][itemIndex];
+                        p.noStroke();
+                        p.noFill();
+                        p.strokeWeight(1);
+                        let z = applyStyle(themeStyle);
                         if(themeStyle.rules) {
                             for(const rule of themeStyle.rules) {
-                                parseRule(rule, item);
+                                let z_res = parseRule(rule, item);
+                                if(rule.style.z_index) z = Z_res;
                             }
                         }
                         if(item.geometry) drawWKT(item.geometry, pg, z);
                         itemIndex++;
+                        entriesSoFar++;
                     }
                 }
                 break;
@@ -226,7 +245,21 @@ let sketch = function(p) {
     }
 
     function parseRule(rule, item) {
-        
+        // we get something like
+        // {
+        //      condition: {
+        //          class: [motorway, secondary]
+        //      }, 
+        //      style: {fill_color: red}}
+        // }
+        // for the rule
+        if(!rule.condition || !rule.style) return;
+        let cond_satisfied = true;
+        for(let property in rule.condition) {
+            //here, property is "class"
+            cond_satisfied &= item[property] && rule.condition[property].includes(item[property]);
+        }
+        if(cond_satisfied) return applyStyle(rule.style);
     }
 
     function applyStyle(style) {
@@ -263,7 +296,7 @@ let sketch = function(p) {
                 p.endShape(p.CLOSE);
                 break;
             default:
-                console.error("Failed to display WKT: ", wkt);
+                // console.error("Failed to display WKT: ", wkt);
                 break;
         }
     }
@@ -298,7 +331,7 @@ let sketch = function(p) {
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = `visualization${
-                    [bbox.lon_min,bbox.lat_min,bbox.lon_max,bbox.lat_max,selectedStyle].join("-")
+                    [bbox.lon_min,bbox.lat_min,bbox.lon_max,bbox.lat_max].join("_")
                 }.png`;
                 link.click();
                 URL.revokeObjectURL(url);
@@ -312,6 +345,12 @@ let sketch = function(p) {
     p.updateData = function(newData) {
         currentData = newData;
         [bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max] = currentData.bbox;
+        totalEntries = 0;
+        console.log("current data", currentData);
+        for(let i = 0; i < currentData.length; i++) {
+            totalEntries += currentData[i].length;
+        }
+        console.log(totalEntries);
     };
 
     p.windowResized = function() {

@@ -3,40 +3,65 @@
         "classic" : {
             "format_version": "1.0",
             "background": {
-                "color": "#001c3f",
-                "z_index": 0
+              "color": "#001c3f",
+              "z_index": 0
             },
             "water": {
-                "fill_color": "#00111f",
-                "z_index": 1
+              "fill_color": "#00111f",
+              "z_index": 1
             },
             "bathymetry": {
-                "stroke_color": "#192273",
-                "z_index": 2,
-                "stroke_weight": 3
+              "stroke_color": "#192273",
+              "z_index": 2,
+              "stroke_weight": 3
+            },
+            "land_cover": {
+              "stroke_color": "#19227366",
+              "z_index": 2,
+              "stroke_weight": 2
             },
             "segment": {
-                "stroke_color": "#ffffff88",
-                "stroke_weight": 1.5,
-                "z_index": 3,
-                "rules": [
-                    {
-                        "condition": {"class": ["motorway", "primary", "secondary"]},
-                        "style": { "stroke_weight": 4 }
-                    }
-                ]
+              "stroke_color": "#446894",
+              "stroke_weight": 1,
+              "z_index": 3,
+              "rules": [
+                {
+                  "condition": {
+                    "class": [
+                      "motorway"
+                    ]
+                  },
+                  "style": {
+                    "stroke_weight": 4,
+                    "stroke_color": "#d8dfe8",
+                    "z-index": 2.2
+                  }
+                },
+                {
+                  "condition": {
+                    "class": [
+                      "primary",
+                      "secondary"
+                    ]
+                  },
+                  "style": {
+                    "stroke_weight": 2,
+                    "stroke_color": "#9db3cf",
+                    "z-index": 2.1
+                  }
+                }
+              ]
             },
             "building": {
-                "fill_color": "#073163",
-                "z_index": 5
+              "fill_color": "#0e3f66",
+              "z_index": 5
             },
             "place": {
-                "stroke_color": "#00e4df",
-                "z_index": 6,
-                "stroke_weight": 1
+              "stroke_color": "#00e4df",
+              "z_index": 6,
+              "stroke_weight": 2
             }
-
-        },
+          },
         "light" : {
             "format_version": "1.0",
             "background": {
@@ -65,12 +90,7 @@
             "building": {
                 "fill_color": "#f1a688",
                 "z_index": 5
-            },
-            "place": {
-                "stroke_color": "#4edad800",
-                "z_index": 6
             }
-
         }
     }
 }
