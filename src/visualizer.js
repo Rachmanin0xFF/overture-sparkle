@@ -103,7 +103,7 @@ let sketch = function(p) {
             p.rect(-p.width*0.25, -10, p.width*0.5, 20);
             p.fill(255);
             p.rect(-p.width*0.25, -10, p.width*0.5*(entriesSoFar*1.0 / totalEntries), 20);
-        }
+        } else entriesSoFar = 0;
     };
 
     function drawLoadingOrbs(style) {
