@@ -3,19 +3,20 @@
         "classic" : {
             "format_version": "1.0",
             "background": {
-                "color": "#001a39",
+                "color": "#001c3f",
                 "z_index": 0
             },
             "water": {
-                "fill_color": "#2c2e7f",
+                "fill_color": "#00111f",
                 "z_index": 1
             },
-            "land": {
-                "fill_color": "#001a39",
-                "z_index": 2
+            "bathymetry": {
+                "stroke_color": "#192273",
+                "z_index": 2,
+                "stroke_weight": 3
             },
             "segment": {
-                "stroke_color": "#ffffff",
+                "stroke_color": "#ffffff88",
                 "stroke_weight": 1.5,
                 "z_index": 3,
                 "rules": [
@@ -26,12 +27,13 @@
                 ]
             },
             "building": {
-                "fill_color": "#05a5af",
+                "fill_color": "#073163",
                 "z_index": 5
             },
             "place": {
-                "stroke_color": "#4edad8",
-                "z_index": 6
+                "stroke_color": "#00e4df22",
+                "z_index": 6,
+                "stroke_weight": 1
             }
 
         },
@@ -44,10 +46,6 @@
             "water": {
                 "fill_color": "#dadada",
                 "z_index": 1
-            },
-            "land": {
-                "fill_color": "#f0f0f0",
-                "z_index": 2
             },
             "segment": {
                 "stroke_color": "#303030",
