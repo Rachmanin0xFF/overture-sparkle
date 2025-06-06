@@ -10,15 +10,15 @@
             },
             "bathymetry": {
               "stroke_color": "#192273",
-              "stroke_weight": 3
+              "stroke_weight": 6
             },
             "land_cover": {
               "stroke_color": "#19227366",
-              "stroke_weight": 2
+              "stroke_weight": 4
             },
             "segment": {
               "stroke_color": "#446894",
-              "stroke_weight": 1,
+              "stroke_weight": 2,
               "rules": [
                 {
                   "condition": {
@@ -27,7 +27,7 @@
                     ]
                   },
                   "style": {
-                    "stroke_weight": 4,
+                    "stroke_weight": 8,
                     "stroke_color": "#d8dfe8"
                   }
                 },
@@ -39,7 +39,7 @@
                     ]
                   },
                   "style": {
-                    "stroke_weight": 2,
+                    "stroke_weight": 4,
                     "stroke_color": "#9db3cf"
                   }
                 }
@@ -50,7 +50,7 @@
             },
             "place": {
               "stroke_color": "#00e4df",
-              "stroke_weight": 2
+              "stroke_weight": 4
             }
           },
         "light" : {

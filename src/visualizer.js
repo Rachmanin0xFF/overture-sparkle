@@ -89,7 +89,7 @@ let sketch = function(p) {
             const col = p.color(200);
             col.setAlpha(255 * loadingLerp);
             p.fill(col);
-            p.text("This might take a minute...", 0, 80);
+            p.text("Querying multiple Overture themes...\n(this might take a minute)", 0, 80);
 
             drawLoadingOrbs(selectedStyle);
         }
